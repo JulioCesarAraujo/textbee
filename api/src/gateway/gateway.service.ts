@@ -2,6 +2,9 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Device, DeviceDocument } from './schemas/device.schema'
 import { Model, Types } from 'mongoose'
+import { ConfigService } from '@nestjs/config';
+import { DeliveryChannelService } from './delivery-channel/delivery-channel.service';
+import { DeliveryMode } from './delivery-channel/delivery-channel.config';
 import * as firebaseAdmin from 'firebase-admin'
 import { DeviceTombstone, DeviceTombstoneDocument } from './schemas/device-tombstone.schema'
 import {
@@ -86,6 +89,7 @@ export class GatewayService {
     private usersService: UsersService,
     private readonly userRollup: UserRollupService,
     private readonly batchStatus: SmsBatchStatusService,
+    private readonly deliveryChannelService: DeliveryChannelService,
   ) {}
 
   // Blocks creating or re-enabling a device when the user's plan device limit
@@ -736,65 +740,72 @@ export class GatewayService {
           HttpStatus.INTERNAL_SERVER_ERROR,
         )
       }
+      }
     }
 
+    // Direct send path - use delivery channel
     try {
-      const skipped = shouldSkipFcmSend(device.user, deviceId)
-      const response = skipped
-        ? skippedBatchResponse(fcmMessages.length)
-        : await firebaseAdmin.messaging().sendEach(fcmMessages)
+      const deliveryResult = await this.deliveryChannelService.sendSMS(deviceId, {
+        message: message,
+        recipients: recipients,
+        simSubscriptionId: smsData.simSubscriptionId,
+      });
 
-      console.log(response)
-
-      if (skipped) {
-        await this.smsModel.updateMany(
-          { smsBatch: smsBatch._id },
-          { $set: { errorCode: FCM_SEND_SKIPPED_ERROR_CODE } },
-        )
-      }
-
-      if (response.successCount === 0) {
+      if (!deliveryResult.success) {
+        await this.failUnsentMessages({ smsBatch: smsBatch._id }, deliveryResult.errorMessage || 'Failed to send SMS');
+        await this.smsBatchModel.findByIdAndUpdate(smsBatch._id, { $set: { error: deliveryResult.errorMessage || 'Failed to send SMS' } }).exec().catch(() => {
+          console.error('failed to record the sms batch error');
+        });
+        await this.batchStatus.refresh([smsBatch._id]);
         throw new HttpException(
           {
             success: false,
             error: 'Failed to send SMS',
-            additionalInfo: response,
+            additionalInfo: deliveryResult,
           },
           HttpStatus.BAD_REQUEST,
-        )
+        );
       }
 
+      // Update sentSMSCount and handle first SMS milestone
       this.deviceModel
         .findByIdAndUpdate(deviceId, {
-          $inc: { sentSMSCount: response.successCount },
+          $inc: { sentSMSCount: recipients.length },
         })
         .exec()
         .catch((e) => {
-          console.log('Failed to update sentSMSCount')
-          console.log(e)
-        })
+          console.log('Failed to update sentSMSCount');
+          console.log(e);
+        });
 
       // sentSMSCount is read before the increment above, so a zero here means
       // this send is the account's first.
-      if (device.sentSMSCount === 0 && response.successCount > 0) {
+      if (device.sentSMSCount === 0) {
         this.usersService
           .markMilestone(userIdOf(device.user), 'firstSmsAt')
-          .catch(() => undefined)
+          .catch(() => undefined);
       }
 
-      await this.batchStatus.refresh([smsBatch._id])
+      await this.batchStatus.refresh([smsBatch._id]);
 
-      return warning ? { ...response, warning } : response
+      return {
+        success: true,
+        successCount: recipients.length,
+        failureCount: 0,
+        messageId: deliveryResult.messageId,
+        timestamp: deliveryResult.timestamp,
+        warning,
+      };
     } catch (e) {
       // Nothing reached the phone, so the messages still pending have failed
-      await this.failUnsentMessages({ smsBatch: smsBatch._id }, e.message)
+      await this.failUnsentMessages({ smsBatch: smsBatch._id }, e.message);
       await this.smsBatchModel
         .findByIdAndUpdate(smsBatch._id, { $set: { error: e.message } })
         .exec()
         .catch(() => {
-          console.error('failed to record the sms batch error')
-        })
-      await this.batchStatus.refresh([smsBatch._id])
+          console.error('failed to record the sms batch error');
+        });
+      await this.batchStatus.refresh([smsBatch._id]);
       throw new HttpException(
         {
           success: false,
@@ -802,7 +813,7 @@ export class GatewayService {
           additionalInfo: e,
         },
         HttpStatus.BAD_REQUEST,
-      )
+      );
     }
   }
 
@@ -1089,91 +1100,82 @@ export class GatewayService {
           HttpStatus.INTERNAL_SERVER_ERROR,
         )
       }
-    }
-
-    // For non-queue path, convert back to simple array
-    const fcmMessages = fcmMessagesWithDelays.map(({ message }) => message)
-    const fcmMessagesBatches = fcmMessages.map((m) => [m])
-    const fcmResponses: BatchResponse[] = []
-    const skipped = shouldSkipFcmSend(device.user, deviceId)
-
-    if (skipped) {
-      await this.smsModel.updateMany(
-        { smsBatch: smsBatch._id },
-        { $set: { errorCode: FCM_SEND_SKIPPED_ERROR_CODE } },
-      )
-    }
-
-    // fcmMessagesBatches holds one message per entry, so anything inside this
-    // loop runs once per recipient. The milestone is tracked outside it.
-    let isFirstSmsForAccount = device.sentSMSCount === 0
-
-    for (const batch of fcmMessagesBatches) {
-      try {
-        const response = skipped
-          ? skippedBatchResponse(batch.length)
-          : await firebaseAdmin.messaging().sendEach(batch)
-
-        console.log(response)
-        fcmResponses.push(response)
-
-        this.deviceModel
-          .findByIdAndUpdate(deviceId, {
-            $inc: { sentSMSCount: response.successCount },
-          })
-          .exec()
-          .catch((e) => {
-            console.log('Failed to update sentSMSCount')
-            console.log(e)
-          })
-
-        if (isFirstSmsForAccount && response.successCount > 0) {
-          isFirstSmsForAccount = false
-          this.usersService
-            .markMilestone(userIdOf(device.user), 'firstSmsAt')
-            .catch(() => undefined)
-        }
-
-      } catch (e) {
-        console.log('Failed to send SMS: FCM')
-        console.log(e)
-
-        const smsIds = batch
-          .map((m) => {
-            try {
-              return JSON.parse(m.data.smsData).smsId
-            } catch {
-              return undefined
-            }
-          })
-          .filter(Boolean)
-        await this.failUnsentMessages({ _id: { $in: smsIds } }, e.message)
-        this.smsBatchModel
-          .findByIdAndUpdate(smsBatch._id, { $set: { error: e.message } })
-          .exec()
-          .catch(() => {
-            console.error('failed to record the sms batch error')
-          })
       }
     }
 
-    await this.batchStatus.refresh([smsBatch._id])
+    // For non-queue path - use delivery channel
+    const recipients = body.messages.map((m) => m.recipients).flat();
+    const message = body.messageTemplate;
 
-    const successCount = fcmResponses.reduce(
-      (acc, m) => acc + m.successCount,
-      0,
-    )
-    const failureCount = fcmResponses.reduce(
-      (acc, m) => acc + m.failureCount,
-      0,
-    )
-    const response = {
-      success: successCount > 0,
-      successCount,
-      failureCount,
-      fcmResponses,
+    try {
+      // Send bulk SMS via delivery channel (FCM or WebSocket based on device configuration)
+      const deliveryResult = await this.deliveryChannelService.sendSMS(deviceId, {
+        message: message,
+        recipients: recipients,
+      });
+
+      if (!deliveryResult.success) {
+        await this.failUnsentMessages({ smsBatch: smsBatch._id }, deliveryResult.errorMessage || 'Failed to send SMS');
+        await this.smsBatchModel.findByIdAndUpdate(smsBatch._id, { $set: { error: deliveryResult.errorMessage || 'Failed to send SMS' } }).exec().catch(() => {
+          console.error('failed to record the sms batch error');
+        });
+        await this.batchStatus.refresh([smsBatch._id]);
+        throw new HttpException(
+          {
+            success: false,
+            error: 'Failed to send SMS',
+            additionalInfo: deliveryResult,
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Update sentSMSCount and handle first SMS milestone
+      this.deviceModel
+        .findByIdAndUpdate(deviceId, {
+          $inc: { sentSMSCount: recipients.length },
+        })
+        .exec()
+        .catch((e) => {
+          console.log('Failed to update sentSMSCount');
+          console.log(e);
+        });
+
+      // sentSMSCount is read before the increment above, so a zero here means
+      // this send is the account's first.
+      if (device.sentSMSCount === 0) {
+        this.usersService
+          .markMilestone(userIdOf(device.user), 'firstSmsAt')
+          .catch(() => undefined);
+      }
+
+      await this.batchStatus.refresh([smsBatch._id]);
+
+      return {
+        success: true,
+        successCount: recipients.length,
+        failureCount: 0,
+        messageId: deliveryResult.messageId,
+        timestamp: deliveryResult.timestamp,
+      };
+    } catch (e) {
+      await this.failUnsentMessages({ smsBatch: smsBatch._id }, e.message);
+      await this.smsBatchModel
+        .findByIdAndUpdate(smsBatch._id, { $set: { error: e.message } })
+        .exec()
+        .catch(() => {
+          console.error('failed to record the sms batch error');
+        });
+      await this.batchStatus.refresh([smsBatch._id]);
+      throw new HttpException(
+        {
+          success: false,
+          error: 'Failed to send SMS',
+          additionalInfo: e,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
     }
-    return response
   }
 
   async receiveSMS(
