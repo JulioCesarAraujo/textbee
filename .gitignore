@@ -7,3 +7,4 @@
 .omc/
 # Rendered email previews (pnpm preview:emails)
 api/tmp/
+plano.txt
