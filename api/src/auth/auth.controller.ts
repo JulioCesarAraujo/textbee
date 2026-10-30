@@ -21,23 +21,32 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger'
+export class AuthFlagsDTO {
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'When true, activates offline mode with remote server and skips email verification',
+  })
+  OFFLINE_MODE_ENABLED?: boolean
+
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'When true, skips email verification even during registration and login in offline mode',
+  })
+  OFFLINE_MODE_SKIP_EMAIL_VERIFICATION?: boolean
+
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'When true, maintains local WebSocket as fallback when remote server is unavailable',
+  })
+  OFFLINE_MODE_LOCAL_WS_FALLBACK?: boolean
+}
+
 import {
-  ApiKeyCreatedResponseDTO,
-  ApiKeyListResponseDTO,
-  AuthSessionResponseDTO,
-  ChangePasswordInputDTO,
-  GoogleLoginInputDTO,
-  LoginInputDTO,
-  MessageResponseDTO,
-  RegisterInputDTO,
-  RenameApiKeyInputDTO,
-  RequestResetPasswordInputDTO,
-  ResetPasswordInputDTO,
-  UpdateOnboardingDTO,
-  UpdateProfileInputDTO,
-  UserResponseDTO,
-  VerifyEmailInputDTO,
-} from './auth.dto'
+  AuthFlagsDTO,
+}
 import { AuthGuard } from './guards/auth.guard'
 import { AuthService } from './auth.service'
 import { resolveRequestContext } from '../common/request-context'
@@ -63,9 +72,9 @@ export class AuthController {
   ) {}
 
   @ApiOperation({
-    summary: 'Sign in with email and password',
+    summary: 'Authenticate with offline mode configuration',
     description:
-      'Returns a JWT for the dashboard. Programmatic callers use an API key instead and never need this endpoint.',
+      'Signs in with email and password, with optional offline mode configuration. When offline mode is enabled and skip email verification is true, email validation and verification are skipped.',
   })
   @ApiResponse({
     status: 200,
@@ -74,18 +83,53 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description: 'The Turnstile check failed.',
+    description: 'The Turnstile check failed or offline mode configuration is invalid.',
   })
   @ApiResponse({
     status: 401,
     description: 'Wrong email or password.',
   })
   @HttpCode(HttpStatus.OK)
-  @Post('/login')
-  async login(@Body() input: LoginInputDTO, @Request() req) {
-    const data = await this.authService.login(
+  @Post('/login-with-offline-mode')
+  async loginWithOfflineMode(
+    @Body()
+    input: LoginInputDTO & {
+      authFlags?: {
+        OFFLINE_MODE_ENABLED?: boolean
+        OFFLINE_MODE_SKIP_EMAIL_VERIFICATION?: boolean
+        OFFLINE_MODE_LOCAL_WS_FALLBACK?: boolean
+      }
+    },
+    @Request() req,
+  ) {
+    const data = await this.authService.loginWithOfflineMode(
       input,
       resolveRequestContext(input.client, req),
+      input.authFlags,
+    )
+    return { data }
+  }
+
+  @ApiOperation({
+    summary: 'Create an account with offline mode configuration',
+    description:
+      'Creates the account and signs it in with optional offline mode configuration. When offline mode is enabled and skip email verification is true, email validation and verification are skipped.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'The account was created.',
+    type: AuthSessionResponseDTO,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'The email is already in use, or the Turnstile check failed.',
+  })
+  @Post('/register-with-offline-mode')
+  async registerWithOfflineMode(@Body() input: RegisterInputDTO & { authFlags?: object }, @Request() req) {
+    const data = await this.authService.registerWithOfflineMode(
+      input,
+      resolveRequestContext(input.client, req),
+      input.authFlags,
     )
     return { data }
   }

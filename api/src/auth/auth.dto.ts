@@ -565,3 +565,26 @@ export class ApiKeyCreatedResponseDTO {
   })
   message: string
 }
+
+export class AuthFlagsDTO {
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'When true, activates offline mode with remote server and skips email verification',
+  })
+  OFFLINE_MODE_ENABLED?: boolean
+
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'When true, skips email verification even during registration and login in offline mode',
+  })
+  OFFLINE_MODE_SKIP_EMAIL_VERIFICATION?: boolean
+
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'When true, maintains local WebSocket as fallback when remote server is unavailable',
+  })
+  OFFLINE_MODE_LOCAL_WS_FALLBACK?: boolean
+}
