@@ -45,6 +45,8 @@ fun SettingsScreen(
     var editedDeviceName by remember(state.deviceName) { mutableStateOf(state.deviceName) }
     var showDelayDialog by remember { mutableStateOf(false) }
     var editedDelay by remember(state.smsSendDelaySeconds) { mutableStateOf(state.smsSendDelaySeconds.toString()) }
+    var showServerUrlDialog by remember { mutableStateOf(false) }
+    var editedServerUrl by remember(state.offlineModeApiUrl) { mutableStateOf(state.offlineModeApiUrl) }
 
     LaunchedEffect(state.snackbarMessage) {
         state.snackbarMessage?.let {
@@ -158,6 +160,49 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            SettingsSectionHeader("Offline Mode")
+
+            SettingsSwitchRow(
+                icon = Icons.Default.Power,
+                title = "Enable Offline Mode",
+                subtitle = "Use offline server instead of production API",
+                checked = state.isOfflineModeEnabled,
+                onCheckedChange = { viewModel.setOfflineModeEnabled(it) }
+            )
+
+            if (state.isOfflineModeEnabled) {
+                SettingsRow(
+                    icon = Icons.Default.Link,
+                    title = "Server URL",
+                    subtitle = state.offlineModeApiUrl.ifEmpty { "—" },
+                    subtitleFont = FontFamily.Monospace,
+                    onClick = {
+                        editedServerUrl = state.offlineModeApiUrl
+                        showServerUrlDialog = true
+                    },
+                    trailing = {
+                        Icon(Icons.Default.ChevronRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                )
+
+                SettingsSwitchRow(
+                    icon = Icons.Default.Check,
+                    title = "Skip Email Verification",
+                    subtitle = "Skip email validation and verification",
+                    checked = state.isEmailVerificationSkipped,
+                    onCheckedChange = { viewModel.setEmailVerificationSkipped(it) }
+                )
+
+                SettingsSwitchRow(
+                    icon = Icons.Default.Web,
+                    title = "Local WebSocket Fallback",
+                    subtitle = "Use local WebSocket when remote server is unavailable",
+                    checked = state.isLocalWebSocketFallback,
+                    onCheckedChange = { viewModel.setLocalWebSocketFallback(it) }
                 )
             }
 
@@ -441,6 +486,39 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDisconnectDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showServerUrlDialog) {
+        AlertDialog(
+            onDismissRequest = { showServerUrlDialog = false },
+            title = { Text("Server URL") },
+            text = {
+                Column {
+                    Text(
+                        "Enter the URL for the offline mode API server",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editedServerUrl,
+                        onValueChange = { editedServerUrl = it },
+                        label = { Text("Server URL") },
+                        placeholder = { Text("https://offline-api.example.com") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setOfflineModeApiUrl(editedServerUrl)
+                    showServerUrlDialog = false
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showServerUrlDialog = false }) { Text("Cancel") }
             }
         )
     }

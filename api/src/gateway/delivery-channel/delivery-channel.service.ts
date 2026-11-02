@@ -7,6 +7,7 @@ import { Device, DeviceDocument } from './schemas/device.schema';
 import { DeliveryChannel } from './delivery-channel';
 import { FcmChannel } from './fcm-channel';
 import { LocalWebSocketChannel } from './local-websocket-channel';
+import { LocalGateway } from './local-gateway'
 import { SMSResult } from './delivery-channel';
 
 export enum DeliveryMode {
@@ -19,15 +20,18 @@ export enum DeliveryMode {
 export class DeliveryChannelService {
   private fcmChannel: FcmChannel;
   private localWebSocketChannel: LocalWebSocketChannel;
+  private localGateway: LocalGateway;
 
   constructor(
     private configService: ConfigService,
     @InjectModel(Device.name) private deviceModel: Model<DeviceDocument>,
     fcmChannel: FcmChannel,
     localWebSocketChannel: LocalWebSocketChannel,
+    localGateway: LocalGateway,
   ) {
     this.fcmChannel = fcmChannel;
     this.localWebSocketChannel = localWebSocketChannel;
+    this.localGateway = localGateway;
     this.initializeChannels();
   }
 
@@ -35,10 +39,13 @@ export class DeliveryChannelService {
     // Initialize FCM channel (should already be initialized in main.ts)
     // The fcmChannel constructor may initialize Firebase if needed
     
-    // Initialize WebSocket channel (will connect when needed)
+    // Initialize LocalGateway WebSocket server
     const localMode = this.configService.get<boolean>('LOCAL_MODE_ENABLED', false);
     if (localMode) {
-      // Start WebSocket connections for all devices
+      // Start WebSocket server
+      await this.localGateway.start();
+      
+      // Connect WebSocket clients for devices
       await this.initializeWebSocketConnections();
     }
   }
@@ -48,7 +55,8 @@ export class DeliveryChannelService {
     
     for (const device of devices) {
       try {
-        await this.localWebSocketChannel.connect(device._id.toString());
+        // Try to connect via LocalGateway if device supports it
+        await this.localGateway.connectDevice(device._id.toString());
       } catch (error) {
         console.error(`Failed to connect WebSocket for device ${device._id}:`, error);
       }
@@ -70,17 +78,17 @@ export class DeliveryChannelService {
           return this.fcmChannel.sendSMS(deviceId, smsData.message, smsData.recipients[0], smsData.simSubscriptionId);
         } else {
           // Fallback to local if no FCM token
-          return this.localWebSocketChannel.sendSMS(deviceId, smsData.message, smsData.recipients[0], smsData.simSubscriptionId);
+          return this.localGateway.sendSMS(deviceId, smsData);
         }
       case DeliveryMode.LOCAL:
-        return this.localWebSocketChannel.sendSMS(deviceId, smsData.message, smsData.recipients[0], smsData.simSubscriptionId);
+        return this.localGateway.sendSMS(deviceId, smsData);
       case DeliveryMode.AUTO:
       default:
         // Smart routing: use FCM if device is online and has token, otherwise use local
         if (device.fcmToken && this.isDeviceOnline(deviceId)) {
           return this.fcmChannel.sendSMS(deviceId, smsData.message, smsData.recipients[0], smsData.simSubscriptionId);
         } else {
-          return this.localWebSocketChannel.sendSMS(deviceId, smsData.message, smsData.recipients[0], smsData.simSubscriptionId);
+          return this.localGateway.sendSMS(deviceId, smsData);
         }
     }
   }
@@ -127,7 +135,7 @@ export class DeliveryChannelService {
         break;
       case DeliveryMode.LOCAL:
       case DeliveryMode.AUTO:
-        await this.localWebSocketChannel.connect(deviceId);
+        await this.localGateway.connectDevice(deviceId);
         break;
     }
   }
@@ -135,13 +143,13 @@ export class DeliveryChannelService {
   async disconnectDevice(deviceId: string): Promise<void> {
     const mode = this.getDeliveryMode(deviceId);
     
-    switch (mode) {F
+    switch (mode) {
       case DeliveryMode.FCM:
         // FCM connection is handled automatically via device deregistration
         break;
       case DeliveryMode.LOCAL:
       case DeliveryMode.AUTO:
-        await this.localWebSocketChannel.disconnect(deviceId);
+        await this.localGateway.disconnectDevice(deviceId);
         break;
     }
   }
@@ -154,7 +162,7 @@ export class DeliveryChannelService {
         return this.fcmChannel.isConnected(deviceId);
       case DeliveryMode.LOCAL:
       case DeliveryMode.AUTO:
-        return this.localWebSocketChannel.isConnected(deviceId);
+        return this.localGateway.isDeviceConnected(deviceId);
       default:
         return false;
     }
@@ -168,7 +176,7 @@ export class DeliveryChannelService {
         return this.fcmChannel.getConnectionState(deviceId);
       case DeliveryMode.LOCAL:
       case DeliveryMode.AUTO:
-        return this.localWebSocketChannel.getConnectionState(deviceId);
+        return this.localGateway.getConnectionState(deviceId);
       default:
         return null;
     }
@@ -176,8 +184,8 @@ export class DeliveryChannelService {
 
   async cleanup(): Promise<void> {
     // Disconnect all WebSocket connections
-    for (const deviceId of this.localWebSocketChannel.connections.keys()) {
-      await this.localWebSocketChannel.disconnect(deviceId);
+    for (const deviceId of this.localGateway.getConnectedDevices()) {
+      await this.localGateway.disconnectDevice(deviceId);
     }
   }
 }

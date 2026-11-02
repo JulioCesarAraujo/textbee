@@ -12,6 +12,8 @@ import com.vernu.sms.TextbeeUtils
 import com.vernu.sms.dtos.RegisterDeviceInputDTO
 import com.vernu.sms.helpers.HeartbeatManager
 import com.vernu.sms.helpers.SharedPreferenceHelper
+import com.vernu.sms.managers.NetworkManager
+import com.vernu.sms.managers.OfflineModeManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,19 +38,19 @@ data class SettingsState(
     val appVersionCode: Int = BuildConfig.VERSION_CODE,
     val isSavingDeviceName: Boolean = false,
     val healthIssueCount: Int = 0,
-    val snackbarMessage: String? = null
+    val snackbarMessage: String? = null,
+    val isOfflineModeEnabled: Boolean = false,
+    val isEmailVerificationSkipped: Boolean = false,
+    val isLocalWebSocketFallback: Boolean = false,
+    val offlineModeApiUrl: String = ""
 )
 
 class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val context get() = getApplication<Application>().applicationContext
 
-    private val _state = MutableStateFlow(SettingsState())
-    val state: StateFlow<SettingsState> = _state.asStateFlow()
-
-    init {
-        loadSettings()
-    }
+    private val networkManager = NetworkManager()
+    private val offlineModeManager = OfflineModeManager()
 
     private fun loadSettings() {
         val deviceId = SharedPreferenceHelper.getSharedPreferenceString(
@@ -99,7 +101,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 smsSendDelaySeconds = smsDelay,
                 preferredSimSubscriptionId = preferredSim,
                 availableSims = sims,
-                healthIssueCount = DeviceHealthViewModel.issueCount(context)
+                healthIssueCount = DeviceHealthViewModel.issueCount(context),
+                isOfflineModeEnabled = offlineModeManager.isOfflineModeEnabled(),
+                isEmailVerificationSkipped = offlineModeManager.isEmailVerificationSkipped(),
+                isLocalWebSocketFallback = offlineModeManager.isLocalWebSocketFallback(),
+                offlineModeApiUrl = offlineModeManager.getOfflineModeApiUrl()
             )
         }
     }
@@ -174,6 +180,41 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             context, AppConstants.SHARED_PREFS_PREFERRED_SIM_KEY, subscriptionId
         )
         _state.update { it.copy(preferredSimSubscriptionId = subscriptionId) }
+    }
+
+    fun setOfflineModeEnabled(enabled: Boolean) {
+        networkManager.setOfflineModeEnabled(enabled)
+        offlineModeManager.setOfflineModeEnabled(enabled)
+        _state.update { it.copy(isOfflineModeEnabled = enabled) }
+    }
+
+    fun setEmailVerificationSkipped(skip: Boolean) {
+        networkManager.setEmailVerificationSkipped(skip)
+        offlineModeManager.setEmailVerificationSkipped(skip)
+        _state.update { it.copy(isEmailVerificationSkipped = skip) }
+    }
+
+    fun setLocalWebSocketFallback(fallback: Boolean) {
+        networkManager.setLocalWebSocketFallback(fallback)
+        offlineModeManager.setLocalWebSocketFallback(fallback)
+        _state.update { it.copy(isLocalWebSocketFallback = fallback) }
+    }
+
+    fun setOfflineModeApiUrl(url: String) {
+        networkManager.setOfflineModeApiUrl(url)
+        offlineModeManager.setOfflineModeApiUrl(url)
+        _state.update { it.copy(offlineModeApiUrl = url) }
+    }
+
+    fun refreshOfflineModeSettings() {
+        _state.update {
+            it.copy(
+                isOfflineModeEnabled = offlineModeManager.isOfflineModeEnabled(),
+                isEmailVerificationSkipped = offlineModeManager.isEmailVerificationSkipped(),
+                isLocalWebSocketFallback = offlineModeManager.isLocalWebSocketFallback(),
+                offlineModeApiUrl = offlineModeManager.getOfflineModeApiUrl()
+            )
+        }
     }
 
     fun saveDeviceName(name: String) {

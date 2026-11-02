@@ -1,7 +1,7 @@
 // local-websocket-channel.ts
 import WebSocket from 'ws';
 import { DeliveryChannel, ConnectionState, SMSResult } from './delivery-channel';
-import { config } from '../config';
+import { deliveryChannelConfig as config } from '../delivery-channel.config';
 
 export class LocalWebSocketChannel implements DeliveryChannel {
   private connections = new Map<string, LocalWebSocketConnection>();
