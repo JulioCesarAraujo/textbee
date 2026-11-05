@@ -8,6 +8,31 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    
+    <!-- 3. Serviço contínuo em segundo plano -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        ...
+        android:usesCleartextTraffic="true"> <!-- CRÍTICO: Permite HTTP na LAN (ex: http://192.168.1.150:8080) -->
+
+        <!-- Activity pronta para chamar as telas de qualquer ponto do app -->
+        <activity
+            android:name="com.textbee.gateway.presentation.TextbeeGatewayActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TextbeeGateway" />
+
+        <!-- Foreground Worker para escutar mensagens locais -->
+        <service
+            android:name="com.textbee.gateway.worker.SmsPollingForegroundService"
+            android:foregroundServiceType="connectedDevice"
+            android:exported="false" />
+    </application>
     
     <!-- Required for local WebSocket -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
