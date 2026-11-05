@@ -49,8 +49,15 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val context get() = getApplication<Application>().applicationContext
 
-    private val networkManager = NetworkManager()
-    private val offlineModeManager = OfflineModeManager()
+    private val _state = MutableStateFlow(SettingsState())
+    val state: StateFlow<SettingsState> = _state.asStateFlow()
+
+    private val networkManager = NetworkManager(app)
+    private val offlineModeManager = OfflineModeManager(app)
+
+    init {
+        loadSettings()
+    }
 
     private fun loadSettings() {
         val deviceId = SharedPreferenceHelper.getSharedPreferenceString(

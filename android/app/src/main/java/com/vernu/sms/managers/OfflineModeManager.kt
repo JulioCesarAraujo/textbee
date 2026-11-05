@@ -3,8 +3,8 @@ package com.vernu.sms.managers;
 import android.content.Context
 import android.content.SharedPreferences
 
-class OfflineModeManager {
-    private val prefs: SharedPreferences = Context.getSharedPreferences("offline_mode_prefs", Context.MODE_PRIVATE)
+class OfflineModeManager(context: Context) {
+    private val prefs: SharedPreferences = context.applicationContext.getSharedPreferences("offline_mode_prefs", Context.MODE_PRIVATE)
     
     fun isOfflineModeEnabled(): Boolean {
         return prefs.getBoolean("OFFLINE_MODE_ENABLED", false)

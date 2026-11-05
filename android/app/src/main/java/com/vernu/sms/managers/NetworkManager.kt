@@ -2,9 +2,10 @@ package com.vernu.sms.managers;
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.vernu.sms.BuildConfig
 
-class NetworkManager {
-    private val prefs: SharedPreferences = Context.getSharedPreferences("network_prefs", Context.MODE_PRIVATE)
+class NetworkManager(context: Context) {
+    private val prefs: SharedPreferences = context.applicationContext.getSharedPreferences("network_prefs", Context.MODE_PRIVATE)
     
     fun getServerUrl(): String {
         // Check if offline mode is enabled
@@ -21,7 +22,7 @@ class NetworkManager {
     }
     
     fun getProductionApiUrl(): String {
-        return BuildConfig.BASE_URL
+        return BuildConfig.API_BASE_URL
     }
     
     fun getOfflineModeApiUrl(): String {
