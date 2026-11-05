@@ -7,11 +7,47 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    
+
     <!-- Light mode specific colors -->
     <color name="background_primary">#FFFFFF</color>
     <color name="background_secondary">#F5F5F5</color>
     <color name="text_primary">#000000</color>
     <color name="text_secondary">#757575</color>
     <color name="divider">#E0E0E0</color>
+
+    <!-- Material Design 3 colors for offline mode settings -->
+    <color name="colorPrimary">#C4620A</color>
+    <color name="colorPrimaryVariant">#A04405</color>
+    <color name="colorSecondary">#B45309</color>
+    <color name="colorOnSecondary">@color/black</color>
+
+    <!-- Surface colors -->
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F2F2F2</color>
+    <color name="surface_container_high">#EBEBEB</color>
+    <color name="on_surface">#000000</color>
+    <color name="on_surface_variant">#757575</color>
+
+    <!-- Primary colors -->
+    <color name="primary">#C4620A</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#FFEDD5</color>
+    <color name="on_primary_container">#4A1B00</color>
+
+    <!-- Tertiary colors -->
+    <color name="tertiary">#006400</color>
+    <color name="on_tertiary">#FFFFFF</color>
+    <color name="tertiary_container">#98F99E</color>
+    <color name="on_tertiary_container">#003300</color>
+
+    <!-- Border colors -->
+    <color name="border">#E0E0E0</color>
+
+    <!-- Radio button colors -->
+    <color name="radio_button_tint">#C4620A</color>
+    <color name="radio_button_text_color">#000000</color>
+
+    <!-- Success color -->
+    <color name="success">#16A34A</color>
+    <color name="error">#DC2626</color>
 </resources>

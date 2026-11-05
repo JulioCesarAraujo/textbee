@@ -5,126 +5,480 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:background="@color/background_primary"
     tools:context=".OfflineModeSettingsActivity">
 
-    <TextView
+    <!-- App Bar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Offline Mode Configuration"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
-
-    <Switch
-        android:id="@+id/offline_mode_switch"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Enable Offline Mode"
-        android:textSize="18sp"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Offline Mode allows you to use a remote server and skip email verification. The local WebSocket is used as a fallback when the remote server is unavailable."
-        android:textSize="14sp"
-        android:layout_marginBottom="24dp"
-        android:visibility="gone"
-        android:id="@+id/offline_mode_description" />
+        android:layout_height="56dp"
+        android:background="?attr/colorPrimarySurface"
+        android:elevation="4dp"
+        app:title="Modo Offline"
+        app:titleTextColor="@color/onSurface" />
 
     <LinearLayout
-        android:id="@+id/server_config_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="vertical"
-        android:layout_marginBottom="24dp"
-        android:visibility="gone"
-        android:id="@+id/server_config_container_view">
+        android:padding="20dp"
+        android:background="@color/background_primary">
 
-        <TextView
+        <!-- Description Card -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Server Configuration"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="20dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp">
 
-        <EditText
-            android:id="@+id/server_url_edit_text"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Modo Offline"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/onSurface"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Permite que você use um servidor remoto e pule a verificação de email. O WebSocket local é usado como fallback quando o servidor remoto está indisponível."
+                    android:textSize="14sp"
+                    android:textColor="@color/onSurfaceVariant"
+                    android:lineSpacingMultiplier="1.3"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <Box
+                        android:layout_width="0dp"
+                        android:layout_height="24dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:background="@color/primary_container"
+                        android:visibility="visible" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="24dp"
+                        android:layout_weight="1"
+                        android:background="@color/surface_variant"
+                        android:text="PRIVADO"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:gravity="center"
+                        android:layout_marginEnd="8dp" />
+
+                    <Box
+                        android:layout_width="0dp"
+                        android:layout_height="24dp"
+                        android:layout_weight="1"
+                        android:background="@color/surface_variant"
+                        android:text="INDISPONÍVEL"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:gravity="center" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Main Configuration Card -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Server URL (e.g., https://offline-api.example.com)"
-            android:inputType="textUri"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="20dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp">
 
-        <TextView
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Configurações do Servidor"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/onSurface"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Switch for Enable Offline Mode -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="20dp"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <Switch
+                            android:id="@+id/offline_mode_switch"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Ativar Modo Offline"
+                            android:textSize="16sp"
+                            android:textColor="@color/onSurface"
+                            android:paddingStart="0dp"
+                            android:paddingEnd="0dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Quando ativado, o app usará um servidor remoto e pulará verificação de email"
+                            android:textSize="12sp"
+                            android:textColor="@color/onSurfaceVariant"
+                            android:lineSpacingMultiplier="1.2"
+                            android:layout_marginTop="4dp" />
+
+                    </LinearLayout>
+
+                    <Box
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="12dp"
+                        android:background="@color/primary_container"
+                        android:visibility="gone"
+                        android:gravity="center"
+                        android:id="@+id/offline_icon">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_web_socket" />
+
+                    </Box>
+
+                </LinearLayout>
+
+                <!-- Server Configuration (conditional) -->
+                <LinearLayout
+                    android:id="@+id/server_config_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Configuração do Servidor Local"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/onSurface"
+                        android:layout_marginBottom="16dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp"
+                        android:gravity="center_vertical">
+
+                        <Box
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="12dp"
+                            android:background="@color/surface_variant"
+                            android:gravity="center">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_server" />
+
+                        </Box>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="URL do Servidor"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/onSurface" />
+
+                            <EditText
+                                android:id="@+id/server_url_edit_text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="https://localhost:8080"
+                                android:inputType="textUri"
+                                android:background="@style/Widget.Material3.Components.OutlinedTextField"
+                                android:layout_marginTop="4dp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="* URL do servidor necessária para modo offline"
+                                android:textSize="11sp"
+                                android:textColor="@android:color/holo_red_light"
+                                android:layout_marginTop="4dp" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Advanced Options Card -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/advanced_options_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:cardBackgroundColor="@color/surface_variant"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="@color/border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:id="@+id/advanced_options_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Opções Avançadas"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/onSurfaceVariant"
+                            android:layout_marginBottom="12dp"
+                            android:visibility="gone" />
+
+                        <!-- Skip Email Verification -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp"
+                            android:gravity="center_vertical">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <Switch
+                                    android:id="@+id/skip_email_verification_switch"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="Pular Verificação de Email"
+                                    android:textSize="14sp"
+                                    android:textColor="@color/onSurface"
+                                    android:paddingStart="0dp"
+                                    android:paddingEnd="0dp"
+                                    android:checked="true" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="Cria contas instantaneamente sem email de verificação"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/onSurfaceVariant"
+                                    android:lineSpacingMultiplier="1.2"
+                                    android:layout_marginTop="4dp" />
+
+                            </LinearLayout>
+
+                            <Box
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_marginStart="12dp"
+                                android:background="@color/primary_container"
+                                android:visibility="gone"
+                                android:gravity="center"
+                                android:id="@+id/email_icon">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_email" />
+
+                            </Box>
+
+                        </LinearLayout>
+
+                        <!-- Local WebSocket Fallback -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <Switch
+                                    android:id="@+id/local_web_socket_fallback_switch"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="WebSocket Local como Fallback"
+                                    android:textSize="14sp"
+                                    android:textColor="@color/onSurface"
+                                    android:paddingStart="0dp"
+                                    android:paddingEnd="0dp"
+                                    android:checked="true" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="Usa WebSocket local se servidor remoto estiver indisponível"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/onSurfaceVariant"
+                                    android:lineSpacingMultiplier="1.2"
+                                    android:layout_marginTop="4dp" />
+
+                            </LinearLayout>
+
+                            <Box
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_marginStart="12dp"
+                                android:background="@color/surface_variant"
+                                android:gravity="center"
+                                android:id="@+id/fallback_icon">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_wifi" />
+
+                            </Box>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+                <!-- Save Button -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:gravity="center_horizontal">
+
+                    <Button
+                        android:id="@+id/save_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_maxWidth="280dp"
+                        android:text="Salvar Configurações"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:backgroundTint="@color/primary"
+                        android:background="@drawable/button_background" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Info Card -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="* Server URL is required when offline mode is enabled"
-            android:textSize="12sp"
-            android:textColor="@android:color/holo_red_light" />
+            android:layout_marginTop="8dp"
+            app:cardBackgroundColor="@color/tertiary_container"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="1dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+
+                <Box
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="@color/tertiary"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_info" />
+
+                </Box>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Offline Mode Ativado"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/on_tertiary_container"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Modo offline está ativo. O app usará o servidor remoto e fará backup local de mensagens."
+                        android:textSize="11sp"
+                        android:textColor="@color/on_tertiary_container"
+                        android:lineSpacingMultiplier="1.2" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/advanced_options_title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Advanced Options"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="12dp"
-        android:visibility="gone"
-        android:id="@+id/advanced_options_title_view" />
-
-    <LinearLayout
-        android:id="@+id/advanced_options_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginBottom="24dp"
-        android:visibility="gone"
-        android:id="@+id/advanced_options_container_view">
-
-        <Switch
-            android:id="@+id/skip_email_verification_switch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Skip Email Verification"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp"
-            android:checked="true" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="When enabled, registration and login will skip email validation and verification."
-            android:textSize="12sp"
-            android:layout_marginBottom="16dp" />
-
-        <Switch
-            android:id="@+id/local_web_socket_fallback_switch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Local WebSocket Fallback"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp"
-            android:checked="true" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="When enabled, local WebSocket will be used as fallback when remote server is unavailable."
-            android:textSize="12sp" />
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/save_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Save Settings"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:layout_marginTop="24dp" />
 
 </LinearLayout>

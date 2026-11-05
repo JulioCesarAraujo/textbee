@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private Context mContext;
     private Switch gatewaySwitch, receiveSMSSwitch, stickyNotificationSwitch;
     private EditText apiKeyEditText, fcmTokenEditText, deviceIdEditText, deviceNameEditText, smsSendDelayEditText;
-    private Button registerDeviceBtn, grantSMSPermissionBtn, scanQRBtn, checkUpdatesBtn, configureFilterBtn, tryNewUIBtn;
+    private Button registerDeviceBtn, grantSMSPermissionBtn, scanQRBtn, checkUpdatesBtn, configureFilterBtn, tryNewUIBtn, offlineModeConfigBtn;
     private ImageButton copyDeviceIdImgBtn;
     private TextView deviceBrandAndModelTxt, deviceIdTxt, appVersionNameTxt, appVersionCodeTxt;
     private RadioGroup defaultSimSlotRadioGroup;
@@ -93,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
         configureFilterBtn = findViewById(R.id.configureFilterBtn);
         smsSendDelayEditText = findViewById(R.id.smsSendDelayEditText);
         tryNewUIBtn = findViewById(R.id.tryNewUIBtn);
+        offlineModeConfigBtn = findViewById(R.id.offlineModeConfigBtn);
 
         deviceIdTxt.setText(deviceId);
         deviceIdEditText.setText(deviceId);
@@ -262,18 +263,24 @@ public class MainActivity extends AppCompatActivity {
             startActivity(browserIntent);
         });
 
-        configureFilterBtn.setOnClickListener(view -> {
-            Intent filterIntent = new Intent(MainActivity.this, SMSFilterActivity.class);
-            startActivity(filterIntent);
-        });
+    configureFilterBtn.setOnClickListener(view -> {
+        Intent filterIntent = new Intent(MainActivity.this, SMSFilterActivity.class);
+        startActivity(filterIntent);
+    });
 
-        tryNewUIBtn.setOnClickListener(view -> {
-            SharedPreferenceHelper.setSharedPreferenceBoolean(mContext, AppConstants.SHARED_PREFS_USE_NEW_UI_KEY, true);
-            HeartbeatManager.triggerHeartbeat(mContext);
-            Intent intent = new Intent(MainActivity.this, com.vernu.sms.ui.splash.SplashActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-        });
+    // Offline mode configuration button
+    offlineModeConfigBtn.setOnClickListener(view -> {
+        Intent offlineModeIntent = new Intent(MainActivity.this, com.vernu.sms.ui.settings.OfflineModeSettingsActivity.class);
+        startActivity(offlineModeIntent);
+    });
+
+    tryNewUIBtn.setOnClickListener(view -> {
+        SharedPreferenceHelper.setSharedPreferenceBoolean(mContext, AppConstants.SHARED_PREFS_USE_NEW_UI_KEY, true);
+        HeartbeatManager.triggerHeartbeat(mContext);
+        Intent intent = new Intent(MainActivity.this, com.vernu.sms.ui.splash.SplashActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+    });
 
         // SMS Send Delay setting: save 3 seconds after user stops typing
         int currentDelay = SharedPreferenceHelper.getSharedPreferenceInt(
