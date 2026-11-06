@@ -15,8 +15,16 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.vernu.sms.ui.main.NewMainActivity
 import com.vernu.sms.ui.onboarding.screens.*
 import com.vernu.sms.ui.theme.TextbeeTheme
+import com.textbee.gateway.presentation.navigation.textbeeGatewayGraph
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class OnboardingActivity : ComponentActivity() {
+
+    companion object {
+        /** Se presente, pula a Home e abre direto a tela de credenciais (true = reconectar dispositivo). */
+        const val EXTRA_RETURNING_USER = "extra_returning_user"
+    }
 
     private val viewModel: OnboardingViewModel by viewModels()
 
@@ -29,12 +37,19 @@ class OnboardingActivity : ComponentActivity() {
             }
         }
 
+        val skipHome = intent.hasExtra(EXTRA_RETURNING_USER)
+        if (skipHome) {
+            viewModel.setReturningUser(intent.getBooleanExtra(EXTRA_RETURNING_USER, false))
+        }
+
         setContent {
             TextbeeTheme {
                 val navController = rememberNavController()
                 OnboardingNavGraph(
                     navController = navController,
                     viewModel = viewModel,
+                    startDestination = if (skipHome) "credentials" else "welcome",
+                    onExit = { finish() },
                     onScanQr = {
                         qrLauncher.launch(ScanOptions().apply {
                             setPrompt("Scan the QR code from textbee.dev/dashboard")
@@ -57,28 +72,31 @@ class OnboardingActivity : ComponentActivity() {
 private fun OnboardingNavGraph(
     navController: NavHostController,
     viewModel: OnboardingViewModel,
+    startDestination: String,
+    onExit: () -> Unit,
     onScanQr: () -> Unit,
     onComplete: () -> Unit
 ) {
-    NavHost(navController = navController, startDestination = "welcome") {
-        composable("welcome") {
-            WelcomeScreen(
-                onGetStarted = {
-                    viewModel.setReturningUser(false)
-                    navController.navigate("credentials")
-                },
-                onHaveDeviceId = {
-                    viewModel.setReturningUser(true)
-                    navController.navigate("credentials")
-                }
-            )
-        }
+    NavHost(navController = navController, startDestination = startDestination) {
+        // Nova Home (substitui o antigo WelcomeScreen) + Configuração + Servidor
+        textbeeGatewayGraph(
+            navController = navController,
+            homeRoute = "welcome",
+            onGetStartedClick = {
+                viewModel.setReturningUser(false)
+                navController.navigate("credentials")
+            },
+            onReconnectClick = {
+                viewModel.setReturningUser(true)
+                navController.navigate("credentials")
+            }
+        )
         composable("credentials") {
             CredentialsScreen(
                 viewModel = viewModel,
                 onScanQr = onScanQr,
                 onNext = { navController.navigate("device_setup") },
-                onBack = { navController.popBackStack() }
+                onBack = { if (!navController.popBackStack()) onExit() }
             )
         }
         composable("device_setup") {

@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -26,7 +26,6 @@ import com.vernu.sms.helpers.HeartbeatManager
 import com.vernu.sms.helpers.RecoveryPoll
 import com.vernu.sms.helpers.SharedPreferenceHelper
 import com.vernu.sms.helpers.VersionTracker
-import com.vernu.sms.ui.dashboard.DashboardScreen
 import com.vernu.sms.ui.messages.ComposeScreen
 import com.vernu.sms.ui.messages.MessagesScreen
 import com.vernu.sms.ui.onboarding.OnboardingActivity
@@ -34,13 +33,17 @@ import com.vernu.sms.ui.settings.DeviceHealthScreen
 import com.vernu.sms.ui.settings.SMSFilterScreen
 import com.vernu.sms.ui.settings.SettingsScreen
 import com.vernu.sms.ui.theme.TextbeeTheme
+import com.textbee.gateway.presentation.navigation.Screen
+import com.textbee.gateway.presentation.navigation.textbeeGatewayGraph
+import dagger.hilt.android.AndroidEntryPoint
 
 enum class MainDestination(val label: String, val icon: ImageVector) {
-    DASHBOARD("Dashboard", Icons.Default.Dashboard),
+    HOME("Home", Icons.Default.Home),
     MESSAGES("Activity", Icons.Default.History),
     SETTINGS("Settings", Icons.Default.Settings)
 }
 
+@AndroidEntryPoint
 class NewMainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +55,12 @@ class NewMainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 MainScaffold(
                     navController = navController,
+                    onOpenOnboarding = { returning ->
+                        startActivity(
+                            Intent(this, OnboardingActivity::class.java)
+                                .putExtra(OnboardingActivity.EXTRA_RETURNING_USER, returning)
+                        )
+                    },
                     onDisconnect = {
                         listOf(
                             AppConstants.SHARED_PREFS_DEVICE_ID_KEY,
@@ -78,11 +87,18 @@ class NewMainActivity : ComponentActivity() {
 @Composable
 private fun MainScaffold(
     navController: NavHostController,
+    onOpenOnboarding: (returning: Boolean) -> Unit,
     onDisconnect: () -> Unit
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute != "compose" && currentRoute != "filters" && currentRoute != "health"
+    val showBottomBar = currentRoute !in setOf(
+        "compose",
+        "filters",
+        "health",
+        Screen.Configuracao.route,
+        Screen.ServerConfig.route
+    )
 
     Scaffold(
         bottomBar = {
@@ -133,12 +149,18 @@ private fun MainScaffold(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = MainDestination.DASHBOARD.name,
+            startDestination = MainDestination.HOME.name,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(MainDestination.DASHBOARD.name) {
-                DashboardScreen()
-            }
+            // Nova Home (substitui o antigo Dashboard) + Configuração + Servidor
+            textbeeGatewayGraph(
+                navController = navController,
+                homeRoute = MainDestination.HOME.name,
+                onGetStartedClick = { onOpenOnboarding(false) },
+                onReconnectClick = { onOpenOnboarding(true) },
+                onNavigateToSmsFilters = { navController.navigate("filters") },
+                onNavigateToDeviceHealth = { navController.navigate("health") }
+            )
             composable(MainDestination.MESSAGES.name) {
                 MessagesScreen(
                     onNavigateToCompose = { navController.navigate("compose") }
