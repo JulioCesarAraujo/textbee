@@ -1,55 +1,27 @@
-package com.vernu.sms.managers;
+package com.vernu.sms.managers
 
 import android.content.Context
-import android.content.SharedPreferences
 
+/**
+ * Leitura das flags do modo offline (plano 6.3). Usa as mesmas preferências do
+ * NetworkManager, para que o que uma tela grava a outra enxergue.
+ */
 class OfflineModeManager(context: Context) {
-    private val prefs: SharedPreferences = context.applicationContext.getSharedPreferences("offline_mode_prefs", Context.MODE_PRIVATE)
-    
-    fun isOfflineModeEnabled(): Boolean {
-        return prefs.getBoolean("OFFLINE_MODE_ENABLED", false)
-    }
-    
-    fun setOfflineModeEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("OFFLINE_MODE_ENABLED", enabled).apply()
-        
-        // When offline mode is enabled, clear production API URL and save offline API URL
-        if (enabled) {
-            val currentOfflineUrl = getOfflineModeApiUrl()
-            if (currentOfflineUrl.isNotEmpty()) {
-                // Save the current API URL as offline mode URL
-                prefs.edit().putString("OFFLINE_MODE_API_URL", currentOfflineUrl).apply()
-            }
-        }
-    }
-    
-    fun getOfflineModeApiUrl(): String {
-        return prefs.getString("OFFLINE_MODE_API_URL", "") ?: ""
-    }
-    
-    fun setOfflineModeApiUrl(url: String) {
-        prefs.edit().putString("OFFLINE_MODE_API_URL", url).apply()
-    }
-    
-    fun isEmailVerificationSkipped(): Boolean {
-        return prefs.getBoolean("OFFLINE_MODE_SKIP_EMAIL_VERIFICATION", false)
-    }
-    
-    fun setEmailVerificationSkipped(skip: Boolean) {
-        prefs.edit().putBoolean("OFFLINE_MODE_SKIP_EMAIL_VERIFICATION", skip).apply()
-    }
-    
-    fun isLocalWebSocketFallback(): Boolean {
-        return prefs.getBoolean("OFFLINE_MODE_LOCAL_WS_FALLBACK", false)
-    }
-    
-    fun setLocalWebSocketFallback(fallback: Boolean) {
-        prefs.edit().putBoolean("OFFLINE_MODE_LOCAL_WS_FALLBACK", fallback).apply()
-    }
-    
-    fun hasValidOfflineModeConfig(): Boolean {
-        return isOfflineModeEnabled() && 
-               isEmailVerificationSkipped() && 
-               getOfflineModeApiUrl().isNotEmpty()
-    }
+    private val network = NetworkManager(context)
+
+    fun isOfflineModeEnabled(): Boolean = network.isOfflineModeEnabled()
+    fun setOfflineModeEnabled(enabled: Boolean) = network.setOfflineModeEnabled(enabled)
+
+    fun getOfflineModeApiUrl(): String = network.getOfflineModeApiUrl()
+    fun setOfflineModeApiUrl(url: String) = network.setOfflineModeApiUrl(url)
+
+    fun isEmailVerificationSkipped(): Boolean = network.isEmailVerificationSkipped()
+    fun setEmailVerificationSkipped(skip: Boolean) = network.setEmailVerificationSkipped(skip)
+
+    fun isLocalWebSocketFallback(): Boolean = network.isLocalWebSocketFallback()
+    fun setLocalWebSocketFallback(fallback: Boolean) = network.setLocalWebSocketFallback(fallback)
+
+    // Modo offline ligado e com pelo menos um servidor para conectar
+    fun hasValidOfflineModeConfig(): Boolean =
+        isOfflineModeEnabled() && network.getOfflineServerOrigins().isNotEmpty()
 }

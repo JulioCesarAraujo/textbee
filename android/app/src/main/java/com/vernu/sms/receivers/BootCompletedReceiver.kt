@@ -26,6 +26,9 @@ class BootCompletedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
 
+        // Modo offline ligado: volta a conectar ao servidor local após reiniciar
+        com.vernu.sms.offline.OfflineModeController.apply(context)
+
         val stickyNotificationEnabled = SharedPreferenceHelper.getSharedPreferenceBoolean(
             context, AppConstants.SHARED_PREFS_STICKY_NOTIFICATION_ENABLED_KEY, false
         )

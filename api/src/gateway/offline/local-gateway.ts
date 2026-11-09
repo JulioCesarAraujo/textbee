@@ -4,7 +4,7 @@ import {
   OnApplicationBootstrap,
   OnModuleDestroy,
 } from '@nestjs/common'
-import { HttpAdapterHost } from '@nestjs/core'
+import { HttpAdapterHost, ModuleRef } from '@nestjs/core'
 import { InjectModel } from '@nestjs/mongoose'
 import type { IncomingMessage, Server } from 'http'
 import type { Duplex } from 'stream'
@@ -12,9 +12,13 @@ import { Model, Types } from 'mongoose'
 import { WebSocket, WebSocketServer } from 'ws'
 import { AuthService } from '../../auth/auth.service'
 import { Device, DeviceDocument } from '../schemas/device.schema'
+import { SMS } from '../schemas/sms.schema'
+// Usado só em tempo de execução (dentro de método), então o ciclo
+// gateway.service -> delivery-channel -> local-gateway não causa problema
+import { GatewayService } from '../gateway.service'
 import { offlineConfig } from './offline.config'
 import { Operation, OperationDocument } from './operation.schema'
-import { parseClientFrame, ResultAckFrame, SendSmsFrame } from './protocol'
+import { parseClientFrame, ResultAckFrame, ResultFrame, SendSmsFrame } from './protocol'
 
 const PING_INTERVAL_MS = 30_000
 const REDELIVERY_INTERVAL_MS = 15_000
@@ -41,6 +45,8 @@ export class LocalGateway implements OnApplicationBootstrap, OnModuleDestroy {
     @InjectModel(Device.name) private readonly deviceModel: Model<DeviceDocument>,
     @InjectModel(Operation.name)
     private readonly operationModel: Model<OperationDocument>,
+    @InjectModel(SMS.name) private readonly smsModel: Model<SMS>,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   onApplicationBootstrap() {
@@ -258,8 +264,8 @@ export class LocalGateway implements OnApplicationBootstrap, OnModuleDestroy {
       return
     }
 
-    await this.operationModel
-      .updateOne(
+    const operation = await this.operationModel
+      .findOneAndUpdate(
         { operationId: frame.id, deviceId },
         {
           $set: {
@@ -272,9 +278,52 @@ export class LocalGateway implements OnApplicationBootstrap, OnModuleDestroy {
       )
       .exec()
 
+    if (operation?.smsId) {
+      await this.applyResultToSms(deviceId, operation, frame).catch((error) =>
+        this.logger.warn(
+          `Failed to update SMS ${operation.smsId} from RESULT ${frame.id}: ${error.message}`,
+        ),
+      )
+    }
+
     // Confirmed even for an unknown id, so the phone stops repeating it
     const ack: ResultAckFrame = { type: 'RESULT_ACK', id: frame.id }
     this.send(deviceId, ack)
+  }
+
+  // Moves the dashboard message to sent/failed through the same path as the
+  // HTTP status report, so webhooks and batch counters stay right. A repeated
+  // RESULT (the phone resends until RESULT_ACK) changes nothing.
+  private async applyResultToSms(
+    deviceId: string,
+    operation: Operation,
+    frame: ResultFrame,
+  ): Promise<void> {
+    if (!Types.ObjectId.isValid(operation.smsId)) return
+    const sms = await this.smsModel.findById(operation.smsId).select('status').lean().exec()
+    if (!sms) return
+
+    const target = frame.status === 'SENT' ? 'sent' : 'failed'
+    const current = String((sms as { status?: string }).status ?? '').toLowerCase()
+    // Delivered is later than sent; a report already applied is not repeated
+    if (current === target || current === 'delivered') return
+
+    const gatewayService = this.moduleRef.get<GatewayService>(GatewayService, {
+      strict: false,
+    })
+    const at = Date.now()
+    await gatewayService.updateSMSStatus(deviceId, {
+      smsId: operation.smsId,
+      smsBatchId: operation.smsBatchId ?? '',
+      status: target,
+      ...(target === 'sent'
+        ? { sentAtInMillis: at }
+        : {
+            failedAtInMillis: at,
+            errorCode: 'local/device-failed',
+            errorMessage: frame.error || 'The phone could not send the SMS',
+          }),
+    })
   }
 
   private send(deviceId: string, frame: object) {

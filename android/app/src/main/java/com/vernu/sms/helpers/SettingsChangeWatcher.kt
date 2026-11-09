@@ -17,6 +17,13 @@ class SettingsChangeWatcher : Application.ActivityLifecycleCallbacks {
             } catch (e: Exception) {
                 android.util.Log.w("SettingsChangeWatcher", "Settings check failed: ${e.message}")
             }
+            // Com o app em primeiro plano o Android permite subir o serviço do modo
+            // offline, caso ele não tenha podido iniciar em segundo plano
+            try {
+                com.vernu.sms.offline.OfflineModeController.apply(appContext)
+            } catch (e: Exception) {
+                android.util.Log.w("SettingsChangeWatcher", "Offline mode check failed: ${e.message}")
+            }
         }
     }
 

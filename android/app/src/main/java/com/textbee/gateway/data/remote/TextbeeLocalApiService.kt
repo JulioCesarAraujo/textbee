@@ -11,8 +11,8 @@ data class ReadyStatusResponse(
 )
 
 interface TextbeeLocalApiService {
-    @GET("v1/sms/ready")
+    @GET("api/v1/gateway/offline/status")
     suspend fun pingReady(
-        @Header("Authorization") authorization: String?
+        @Header("x-api-key") apiKey: String?
     ): Response<ReadyStatusResponse>
 }

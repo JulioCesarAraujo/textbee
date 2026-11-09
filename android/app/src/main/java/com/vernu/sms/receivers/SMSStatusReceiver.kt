@@ -10,6 +10,7 @@ import com.vernu.sms.AppConstants
 import com.vernu.sms.dtos.SMSDTO
 import com.vernu.sms.helpers.DeviceLog
 import com.vernu.sms.helpers.SharedPreferenceHelper
+import com.vernu.sms.offline.OfflineOperationProcessor
 import com.vernu.sms.workers.SMSStatusUpdateWorker
 import java.lang.reflect.Modifier
 
@@ -92,7 +93,28 @@ class SMSStatusReceiver : BroadcastReceiver() {
                 Log.e(TAG, "SMS failed to send - ID: ${smsDTO.smsId}, Error: $msg")
             }
         }
-        updateSMSStatus(context, smsDTO)
+        reportSentResult(context, resultCode, smsDTO)
+    }
+
+    // Mensagem do modo offline: o resultado vai ao servidor pelo RESULT do
+    // WebSocket (fica na fila local até ser confirmado). As demais seguem pelo HTTP.
+    private fun reportSentResult(context: Context, resultCode: Int, smsDTO: SMSDTO) {
+        val pending = goAsync()
+        val appContext = context.applicationContext
+        OfflineOperationProcessor.execute {
+            try {
+                val handled = OfflineOperationProcessor.recordSendResult(
+                    appContext, smsDTO.smsId, smsDTO.status == "SENT", smsDTO.errorMessage, resultCode
+                )
+                if (handled) {
+                    DeviceLog.log(appContext, "status_${smsDTO.status?.lowercase() ?: "unknown"}", "offline: " + (smsDTO.errorMessage ?: ""), smsDTO.smsId)
+                } else {
+                    updateSMSStatus(appContext, smsDTO)
+                }
+            } finally {
+                pending.finish()
+            }
+        }
     }
 
     private fun handleDeliveredStatus(context: Context, resultCode: Int, smsDTO: SMSDTO) {

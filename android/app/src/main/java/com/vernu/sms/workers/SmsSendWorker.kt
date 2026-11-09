@@ -19,6 +19,7 @@ import com.vernu.sms.helpers.SMSHelper
 import com.vernu.sms.helpers.SendSlotScheduler
 import com.vernu.sms.helpers.SendTiming
 import com.vernu.sms.helpers.SharedPreferenceHelper
+import com.vernu.sms.offline.OfflineOperationProcessor
 import java.util.concurrent.TimeUnit
 
 class SmsSendWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
@@ -188,7 +189,13 @@ class SmsSendWorker(context: Context, workerParams: WorkerParameters) : Worker(c
         } else {
             SMSHelper.sendSMS(phone, message, smsId, smsBatchId ?: "", context, timing)
         }
-        if (sent) store.markSent(smsId, phone) else DeviceLog.log(context, "send_failed", "radio call refused", smsId)
+        if (sent) {
+            store.markSent(smsId, phone)
+        } else {
+            DeviceLog.log(context, "send_failed", "radio call refused", smsId)
+            // Sem recibo do rádio: no modo offline o FAILED vai ao servidor por aqui
+            OfflineOperationProcessor.recordSendResult(context, smsId, false, "The phone refused the send (radio call refused)", null)
+        }
 
         if (legacy) {
             val delaySeconds = configuredDelaySeconds(context)

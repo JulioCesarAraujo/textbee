@@ -398,7 +398,7 @@ fun ServerConfigScreen(
                             )
                         )
                         Text(
-                            text = "Porta padrão sugerida pelo daemon Textbee: 8080 ou 3000.",
+                            text = "Porta padrão da API Textbee: 3001.",
                             fontSize = 11.sp,
                             color = OnSurfaceVariant
                         )

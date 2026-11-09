@@ -4,7 +4,7 @@ data class ServerConfig(
     val isPrivateServerEnabled: Boolean = true,
     val protocol: String = "http://",
     val host: String = "192.168.1.150",
-    val port: String = "8080",
+    val port: String = "3001",
     val apiToken: String = "",
     val isWorkerForegroundEnabled: Boolean = true,
     val isSqliteBufferEnabled: Boolean = true,
@@ -44,7 +44,7 @@ data class ServerConfig(
             isPrivateServerEnabled = true,
             protocol = "http://",
             host = "192.168.1.150",
-            port = "8080",
+            port = "3001",
             apiToken = "",
             isWorkerForegroundEnabled = true,
             isSqliteBufferEnabled = true

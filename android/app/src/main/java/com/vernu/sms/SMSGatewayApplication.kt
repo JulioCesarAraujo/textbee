@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.vernu.sms.helpers.SettingsChangeWatcher
+import com.vernu.sms.offline.OfflineModeController
 import dagger.hilt.android.HiltAndroidApp
 
 /**
@@ -25,6 +26,11 @@ class SMSGatewayApplication : Application(), Configuration.Provider {
             // Já inicializado (ex.: androidx.startup) — pode continuar
             Log.d(TAG, "WorkManager already initialized or will be initialized automatically")
         }
+
+        // A URL da API segue o modo offline (NetworkManager)
+        ApiManager.init(this)
+        // Modo offline ligado: abre o WebSocket com o servidor local
+        OfflineModeController.apply(this)
 
         registerActivityLifecycleCallbacks(SettingsChangeWatcher())
     }

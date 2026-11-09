@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.textbee.gateway.domain.model.ServerConfig
+import com.vernu.sms.managers.NetworkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,10 +31,11 @@ class ServerPreferencesDataSource @Inject constructor(
 
     val serverConfigFlow: Flow<ServerConfig> = context.dataStore.data.map { prefs ->
         ServerConfig(
-            isPrivateServerEnabled = prefs[Keys.PRIVATE_SERVER_ENABLED] ?: true,
+            // O mesmo switch do modo offline das Configurações (NetworkManager)
+            isPrivateServerEnabled = NetworkManager(context).isOfflineModeEnabled(),
             protocol = prefs[Keys.PROTOCOL] ?: "http://",
             host = prefs[Keys.HOST] ?: "192.168.1.150",
-            port = prefs[Keys.PORT] ?: "8080",
+            port = prefs[Keys.PORT] ?: "3001",
             apiToken = prefs[Keys.API_TOKEN] ?: "",
             isWorkerForegroundEnabled = prefs[Keys.WORKER_FOREGROUND] ?: true,
             isSqliteBufferEnabled = prefs[Keys.SQLITE_BUFFER] ?: true

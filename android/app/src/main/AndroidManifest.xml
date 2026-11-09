@@ -112,9 +112,9 @@
             android:exported="false"
             android:foregroundServiceType="remoteMessaging" />
 
-        <!-- Foreground worker do modo offline/self-hosted (telas adicionais) -->
+        <!-- WebSocket com o servidor local, ativo só no modo offline (plano 2.3) -->
         <service
-            android:name="com.textbee.gateway.worker.SmsPollingForegroundService"
+            android:name=".offline.LocalChannelService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
 

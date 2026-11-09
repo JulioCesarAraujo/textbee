@@ -12,8 +12,8 @@ import com.vernu.sms.TextbeeUtils
 import com.vernu.sms.dtos.RegisterDeviceInputDTO
 import com.vernu.sms.helpers.HeartbeatManager
 import com.vernu.sms.helpers.SharedPreferenceHelper
-import com.vernu.sms.managers.NetworkManager
 import com.vernu.sms.managers.OfflineModeManager
+import com.vernu.sms.offline.OfflineModeController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,7 +52,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
 
-    private val networkManager = NetworkManager(app)
     private val offlineModeManager = OfflineModeManager(app)
 
     init {
@@ -189,28 +188,28 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(preferredSimSubscriptionId = subscriptionId) }
     }
 
+    // Ligar conecta ao servidor offline; desligar desconecta (plano 4.2)
     fun setOfflineModeEnabled(enabled: Boolean) {
-        networkManager.setOfflineModeEnabled(enabled)
         offlineModeManager.setOfflineModeEnabled(enabled)
         _state.update { it.copy(isOfflineModeEnabled = enabled) }
+        OfflineModeController.apply(context)
     }
 
     fun setEmailVerificationSkipped(skip: Boolean) {
-        networkManager.setEmailVerificationSkipped(skip)
         offlineModeManager.setEmailVerificationSkipped(skip)
         _state.update { it.copy(isEmailVerificationSkipped = skip) }
     }
 
     fun setLocalWebSocketFallback(fallback: Boolean) {
-        networkManager.setLocalWebSocketFallback(fallback)
         offlineModeManager.setLocalWebSocketFallback(fallback)
         _state.update { it.copy(isLocalWebSocketFallback = fallback) }
+        OfflineModeController.reconnect(context)
     }
 
     fun setOfflineModeApiUrl(url: String) {
-        networkManager.setOfflineModeApiUrl(url)
         offlineModeManager.setOfflineModeApiUrl(url)
-        _state.update { it.copy(offlineModeApiUrl = url) }
+        _state.update { it.copy(offlineModeApiUrl = url.trim()) }
+        OfflineModeController.reconnect(context)
     }
 
     fun refreshOfflineModeSettings() {

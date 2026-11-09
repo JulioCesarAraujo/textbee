@@ -4,7 +4,7 @@ sealed interface ConnectionTestResult {
     data class Success(
         val latencyMs: Long,
         val engineVersion: String = "v2.4.2",
-        val endpoint: String = "/v1/sms/ready",
+        val endpoint: String = "/api/v1/gateway/offline/status",
         val message: String = "ACK OK"
     ) : ConnectionTestResult
 
