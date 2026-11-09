@@ -423,9 +423,13 @@
                                 android:text="Toggle to enable SMS receiving"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="14sp" />
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:minHeight="32dp" />
+                        </LinearLayout>
+
+                        <Switch
+                            android:id="@+id/receiveSMSSwitch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minHeight="32dp" />
                     </LinearLayout>
 
                     <!-- Filter Configuration Link -->
@@ -440,22 +444,6 @@
                         android:letterSpacing="0.01"
                         android:backgroundTint="@android:color/transparent"
                         android:drawableStart="@android:drawable/ic_menu_manage"
-                        android:drawablePadding="6dp"
-                        android:paddingHorizontal="0dp"
-                        style="@style/Widget.MaterialComponents.Button.TextButton" />
-
-                    <!-- Offline Mode Configuration Link -->
-                    <Button
-                        android:id="@+id/offlineModeConfigBtn"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:text="Configure Offline Mode"
-                        android:textColor="?attr/colorPrimary"
-                        android:textSize="15sp"
-                        android:letterSpacing="0.01"
-                        android:backgroundTint="@android:color/transparent"
-                        android:drawableStart="@drawable/ic_wifi"
                         android:drawablePadding="6dp"
                         android:paddingHorizontal="0dp"
                         style="@style/Widget.MaterialComponents.Button.TextButton" />

@@ -25,7 +25,6 @@ import { TurnstileService } from '../common/turnstile.service'
 import { escapeRegExp } from '../common/escape-regexp'
 import { pickLocation } from '../common/client-address'
 import { RequestContext } from '../common/request-context'
-import { ConfigService } from '@nestjs/config'
 import { RequestResetPasswordInputDTO, ResetPasswordInputDTO } from './auth.dto'
 import { AccessFootprintService } from './access-footprint.service'
 import {
@@ -64,10 +63,9 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly turnstileService: TurnstileService,
     private readonly analyticsService: AnalyticsService,
-    private readonly configService: ConfigService,
   ) {}
 
-  async login(userData: any, requestContext?: RequestContext, authFlags?: object) {
+  async login(userData: any, requestContext?: RequestContext) {
     await this.turnstileService.verify(userData.turnstileToken)
 
     const user = await this.usersService.findOneWithPassword({
@@ -96,11 +94,6 @@ export class AuthService {
       accessToken: this.jwtService.sign(payload),
       user: withoutPassword(user),
     }
-  }
-
-  async loginWithOfflineMode(userData: any, requestContext?: RequestContext, authFlags?: object) {
-    const data = await this.login(userData, requestContext, authFlags)
-    return { data }
   }
 
   // tokeninfo only proves Google signed the token, not that it was issued for
@@ -202,7 +195,7 @@ export class AuthService {
     }
   }
 
-  async register(userData: any, requestContext?: RequestContext, authFlags?: object) {
+  async register(userData: any, requestContext?: RequestContext) {
     await this.turnstileService.verify(userData.turnstileToken)
 
     const existingUser = await this.usersService.findOne({
@@ -239,13 +232,10 @@ export class AuthService {
 
     this.analyticsService.userRegistered(user as any, requestContext)
 
-    // Pular envio de email de verificação quando modo offline ativado e configuração para pular verificação de email
-    if (!this.shouldSkipEmailVerification()) {
-      this.sendEmailVerificationEmail(user).catch((e) => {
-        console.log('Failed to send email verification email')
-        console.log(e)
-      })
-    }
+    this.sendEmailVerificationEmail(user).catch((e) => {
+      console.log('Failed to send email verification email')
+      console.log(e)
+    })
 
     const payload = { email: user.email, sub: user._id }
 
@@ -253,11 +243,6 @@ export class AuthService {
       accessToken: this.jwtService.sign(payload),
       user: withoutPassword(user),
     }
-  }
-
-  async registerWithOfflineMode(userData: any, requestContext?: RequestContext, authFlags?: object) {
-    const data = await this.register(userData, requestContext, authFlags)
-    return { data }
   }
 
   async requestResetPassword({
@@ -740,17 +725,7 @@ export class AuthService {
     this.accessFootprintService.record({ request })
   }
 
-  private shouldSkipEmailVerification(): boolean {
-    return this.configService.get<string>('OFFLINE_MODE_ENABLED') === 'true' &&
-           this.configService.get<string>('OFFLINE_MODE_SKIP_EMAIL_VERIFICATION') === 'true'
-  }
-
   async validateEmail(email: string) {
-    // Pular validação de email quando modo offline ativado e configuração para pular verificação de email
-    if (this.shouldSkipEmailVerification()) {
-      return
-    }
-
     // Anchored, with character classes that cannot overlap, and bounded by the
     // RFC length limit. The previous pattern was unanchored \S+@\S+\.\S+,
     // whose repeated \S+ groups backtrack polynomially on a long run of
@@ -766,7 +741,6 @@ export class AuthService {
       )
     }
   }
-
   async validatePassword(password: string) {
     if (password.length < 6 || password.length > 128) {
       throw new HttpException(
