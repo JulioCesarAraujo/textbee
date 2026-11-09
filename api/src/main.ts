@@ -72,9 +72,17 @@ async function bootstrap() {
     clientC509CertUrl: process.env.FIREBASE_CLIENT_C509_CERT_URL,
   }
 
-  firebase.initializeApp({
-    credential: firebase.credential.cert(firebaseConfig),
-  })
+  // Without credentials the server still runs (offline mode, plan phase 0.1):
+  // sends go to the local WebSocket channel instead of FCM.
+  if (firebaseConfig.projectId && firebaseConfig.privateKey && firebaseConfig.clientEmail) {
+    firebase.initializeApp({
+      credential: firebase.credential.cert(firebaseConfig),
+    })
+  } else {
+    new Logger('Bootstrap').warn(
+      'Firebase credentials are not set; FCM is disabled and only the local WebSocket channel can deliver SMS',
+    )
+  }
 
   app.use(
     '/api/v1/billing/webhook/polar',

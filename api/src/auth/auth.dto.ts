@@ -212,6 +212,30 @@ export class ClientContextDTO {
   asn?: number
 }
 
+// Offline mode flags the app sends with login and register (plan phase 6.2)
+export class AuthFlagsDTO {
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'The app is in offline mode. Informational: the server decides from its own OFFLINE_MODE_ENABLED.',
+  })
+  OFFLINE_MODE_ENABLED?: boolean
+
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'Ask to skip email verification. Honoured only when the server runs with OFFLINE_MODE_ENABLED=true.',
+  })
+  OFFLINE_MODE_SKIP_EMAIL_VERIFICATION?: boolean
+
+  @ApiProperty({
+    type: Boolean,
+    required: false,
+    description: 'The app falls back to the local WebSocket server when the remote one is unreachable. Informational.',
+  })
+  OFFLINE_MODE_LOCAL_WS_FALLBACK?: boolean
+}
+
 export class RegisterInputDTO {
   @ApiProperty({
     type: String,
@@ -272,6 +296,13 @@ export class RegisterInputDTO {
     description: 'Cloudflare Turnstile token from the signup form.',
   })
   turnstileToken: string
+
+  @ApiProperty({
+    type: AuthFlagsDTO,
+    required: false,
+    description: 'Offline mode flags. See AuthFlagsDTO.',
+  })
+  authFlags?: AuthFlagsDTO
 }
 
 export class LoginInputDTO {
@@ -299,6 +330,13 @@ export class LoginInputDTO {
     description: "The visitor's browser details, when the caller is a proxy.",
   })
   client?: ClientContextDTO
+
+  @ApiProperty({
+    type: AuthFlagsDTO,
+    required: false,
+    description: 'Offline mode flags. See AuthFlagsDTO.',
+  })
+  authFlags?: AuthFlagsDTO
 }
 
 export class GoogleLoginInputDTO {
@@ -564,27 +602,4 @@ export class ApiKeyCreatedResponseDTO {
     description: 'Reminder that the key will not be shown again.',
   })
   message: string
-}
-
-export class AuthFlagsDTO {
-  @ApiProperty({
-    type: Boolean,
-    required: false,
-    description: 'When true, activates offline mode with remote server and skips email verification',
-  })
-  OFFLINE_MODE_ENABLED?: boolean
-
-  @ApiProperty({
-    type: Boolean,
-    required: false,
-    description: 'When true, skips email verification even during registration and login in offline mode',
-  })
-  OFFLINE_MODE_SKIP_EMAIL_VERIFICATION?: boolean
-
-  @ApiProperty({
-    type: Boolean,
-    required: false,
-    description: 'When true, maintains local WebSocket as fallback when remote server is unavailable',
-  })
-  OFFLINE_MODE_LOCAL_WS_FALLBACK?: boolean
 }

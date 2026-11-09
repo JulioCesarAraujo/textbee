@@ -65,6 +65,7 @@ import {
 import { DispatchPlan } from './queue/dispatch-pacing'
 import { Job } from 'bull'
 import { SmsBatchStatusService } from './sms-batch-status.service'
+import { DeliveryChannelService } from './offline/delivery-channel.service'
 
 // device.user is a ref, so it is an ObjectId unless the query populated it.
 function userIdOf(user: any) {
@@ -86,6 +87,7 @@ export class GatewayService {
     private usersService: UsersService,
     private readonly userRollup: UserRollupService,
     private readonly batchStatus: SmsBatchStatusService,
+    private readonly deliveryChannel: DeliveryChannelService,
   ) {}
 
   // Blocks creating or re-enabling a device when the user's plan device limit
@@ -742,7 +744,7 @@ export class GatewayService {
       const skipped = shouldSkipFcmSend(device.user, deviceId)
       const response = skipped
         ? skippedBatchResponse(fcmMessages.length)
-        : await firebaseAdmin.messaging().sendEach(fcmMessages)
+        : await this.deliveryChannel.dispatch(device, fcmMessages)
 
       console.log(response)
 
@@ -1112,7 +1114,7 @@ export class GatewayService {
       try {
         const response = skipped
           ? skippedBatchResponse(batch.length)
-          : await firebaseAdmin.messaging().sendEach(batch)
+          : await this.deliveryChannel.dispatch(device, batch)
 
         console.log(response)
         fcmResponses.push(response)

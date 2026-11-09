@@ -86,6 +86,7 @@ export class AuthController {
     const data = await this.authService.login(
       input,
       resolveRequestContext(input.client, req),
+      input.authFlags,
     )
     return { data }
   }
@@ -134,6 +135,7 @@ export class AuthController {
     const data = await this.authService.register(
       input,
       resolveRequestContext(input.client, req),
+      input.authFlags,
     )
     return { data }
   }

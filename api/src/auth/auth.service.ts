@@ -25,7 +25,12 @@ import { TurnstileService } from '../common/turnstile.service'
 import { escapeRegExp } from '../common/escape-regexp'
 import { pickLocation } from '../common/client-address'
 import { RequestContext } from '../common/request-context'
-import { RequestResetPasswordInputDTO, ResetPasswordInputDTO } from './auth.dto'
+import { offlineConfig } from '../gateway/offline/offline.config'
+import {
+  AuthFlagsDTO,
+  RequestResetPasswordInputDTO,
+  ResetPasswordInputDTO,
+} from './auth.dto'
 import { AccessFootprintService } from './access-footprint.service'
 import {
   EmailVerification,
@@ -65,7 +70,24 @@ export class AuthService {
     private readonly analyticsService: AnalyticsService,
   ) {}
 
-  async login(userData: any, requestContext?: RequestContext) {
+  // Offline mode (plan phase 6.2). Only a server started with
+  // OFFLINE_MODE_ENABLED=true skips email verification, either for every
+  // account (OFFLINE_MODE_SKIP_EMAIL_VERIFICATION=true) or when the client asks
+  // for it through authFlags. A client flag alone never skips anything.
+  shouldSkipEmailVerification(authFlags?: AuthFlagsDTO): boolean {
+    const config = offlineConfig()
+    if (!config.enabled) return false
+    return (
+      config.skipEmailVerification ||
+      authFlags?.OFFLINE_MODE_SKIP_EMAIL_VERIFICATION === true
+    )
+  }
+
+  async login(
+    userData: any,
+    requestContext?: RequestContext,
+    authFlags?: AuthFlagsDTO,
+  ) {
     await this.turnstileService.verify(userData.turnstileToken)
 
     const user = await this.usersService.findOneWithPassword({
@@ -86,6 +108,10 @@ export class AuthService {
     }
 
     user.lastLoginAt = new Date()
+    // An account created before offline mode was on is treated as verified
+    if (!user.emailVerifiedAt && this.shouldSkipEmailVerification(authFlags)) {
+      user.emailVerifiedAt = new Date()
+    }
     this.usersService.touchClient(user, requestContext?.userAgent)
     await user.save()
 
@@ -195,7 +221,13 @@ export class AuthService {
     }
   }
 
-  async register(userData: any, requestContext?: RequestContext) {
+  async register(
+    userData: any,
+    requestContext?: RequestContext,
+    authFlags?: AuthFlagsDTO,
+  ) {
+    const skipEmailVerification = this.shouldSkipEmailVerification(authFlags)
+
     await this.turnstileService.verify(userData.turnstileToken)
 
     const existingUser = await this.usersService.findOne({
@@ -228,14 +260,21 @@ export class AuthService {
     })
 
     user.lastLoginAt = new Date()
+    // Offline mode: no verification email, and the account counts as verified
+    // so it can send right away
+    if (skipEmailVerification) {
+      user.emailVerifiedAt = new Date()
+    }
     await user.save()
 
     this.analyticsService.userRegistered(user as any, requestContext)
 
-    this.sendEmailVerificationEmail(user).catch((e) => {
-      console.log('Failed to send email verification email')
-      console.log(e)
-    })
+    if (!skipEmailVerification) {
+      this.sendEmailVerificationEmail(user).catch((e) => {
+        console.log('Failed to send email verification email')
+        console.log(e)
+      })
+    }
 
     const payload = { email: user.email, sub: user._id }
 

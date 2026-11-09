@@ -24,6 +24,7 @@ import { decodeCursor } from './cursor'
 import { User } from '../users/schemas/user.schema'
 import { UserRole } from '../users/user-roles.enum'
 import { BatchResponse } from 'firebase-admin/messaging'
+import { DeliveryChannelService } from './offline/delivery-channel.service'
 
 // Mock firebase-admin
 jest.mock('firebase-admin', () => ({
@@ -162,6 +163,13 @@ describe('GatewayService', () => {
         {
           provide: SmsBatchStatusService,
           useValue: mockBatchStatus,
+        },
+        {
+          // FCM path: forwards to the mocked firebase-admin
+          provide: DeliveryChannelService,
+          useValue: {
+            dispatch: (_device, messages) => firebaseAdmin.messaging().sendEach(messages),
+          },
         },
       ],
       imports: [ConfigModule],

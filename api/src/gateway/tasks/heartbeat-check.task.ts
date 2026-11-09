@@ -106,6 +106,12 @@ export class HeartbeatCheckTask {
         return
       }
 
+      // A server running without Firebase (offline mode) cannot push
+      if (firebaseAdmin.apps.length === 0) {
+        this.logger.debug('Firebase is not configured, skipping heartbeat pushes')
+        return
+      }
+
       // Send FCM messages in batches (FCM allows max 500 per sendEach call)
       let totalSuccessCount = 0
       let totalFailureCount = 0

@@ -58,6 +58,8 @@ describe('SmsQueueProcessor.handleSendSms', () => {
       mockWebhookService as any,
       mockUsersService as any,
       mockBatchStatus as any,
+      // FCM path: forwards to the mocked firebase-admin
+      { dispatch: (_device, messages) => firebaseAdmin.messaging().sendEach(messages) } as any,
     )
   })
 

@@ -17,6 +17,13 @@ import { SmsQueueProcessor } from './queue/sms-queue.processor'
 import { SmsStatusUpdateTask } from './tasks/sms-status-update.task'
 import { HeartbeatCheckTask } from './tasks/heartbeat-check.task'
 import { SmsBatchStatusService } from './sms-batch-status.service'
+import { Operation, OperationSchema } from './offline/operation.schema'
+import { LocalGateway } from './offline/local-gateway'
+import { FcmChannel, LocalWsChannel } from './offline/delivery-channel'
+import { ModeManager } from './offline/mode-manager'
+import { DeliveryChannelService } from './offline/delivery-channel.service'
+import { SyncManager } from './offline/sync-manager'
+import { OfflineController } from './offline/offline.controller'
 
 @Module({
   imports: [
@@ -36,6 +43,10 @@ import { SmsBatchStatusService } from './sms-batch-status.service'
       {
         name: SMSBatch.name,
         schema: SMSBatchSchema,
+      },
+      {
+        name: Operation.name,
+        schema: OperationSchema,
       },
     ]),
     BullModule.registerQueueAsync({
@@ -64,7 +75,7 @@ import { SmsBatchStatusService } from './sms-batch-status.service'
     forwardRef(() => BillingModule),
     ConfigModule,
   ],
-  controllers: [GatewayController],
+  controllers: [GatewayController, OfflineController],
   providers: [
     GatewayService,
     SmsQueueService,
@@ -72,6 +83,12 @@ import { SmsBatchStatusService } from './sms-batch-status.service'
     SmsStatusUpdateTask,
     HeartbeatCheckTask,
     SmsBatchStatusService,
+    LocalGateway,
+    FcmChannel,
+    LocalWsChannel,
+    ModeManager,
+    DeliveryChannelService,
+    SyncManager,
   ],
   exports: [MongooseModule, GatewayService, SmsQueueService],
 })
