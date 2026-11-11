@@ -26,6 +26,7 @@ import com.vernu.sms.helpers.HeartbeatManager
 import com.vernu.sms.helpers.RecoveryPoll
 import com.vernu.sms.helpers.SharedPreferenceHelper
 import com.vernu.sms.helpers.VersionTracker
+import com.vernu.sms.ui.dashboard.DashboardScreen
 import com.vernu.sms.ui.messages.ComposeScreen
 import com.vernu.sms.ui.messages.MessagesScreen
 import com.vernu.sms.ui.onboarding.OnboardingActivity
@@ -83,6 +84,8 @@ class NewMainActivity : ComponentActivity() {
         }
     }
 }
+
+private const val GATEWAY_WELCOME_ROUTE = "gateway_welcome"
 
 @Composable
 private fun MainScaffold(
@@ -152,10 +155,17 @@ private fun MainScaffold(
             startDestination = MainDestination.HOME.name,
             modifier = Modifier.padding(innerPadding)
         ) {
-            // Nova Home (substitui o antigo Dashboard) + Configuração + Servidor
+            // Home: o dashboard real do aparelho. Esta tela só abre com o aparelho
+            // já cadastrado (a SplashActivity manda os demais para o onboarding),
+            // então a tela de boas-vindas não aparece mais aqui.
+            composable(MainDestination.HOME.name) {
+                DashboardScreen()
+            }
+            // Configuração e Servidor local; a tela de boas-vindas fica numa rota
+            // que nenhum menu abre
             textbeeGatewayGraph(
                 navController = navController,
-                homeRoute = MainDestination.HOME.name,
+                homeRoute = GATEWAY_WELCOME_ROUTE,
                 onGetStartedClick = { onOpenOnboarding(false) },
                 onReconnectClick = { onOpenOnboarding(true) },
                 onNavigateToSmsFilters = { navController.navigate("filters") },
@@ -169,6 +179,7 @@ private fun MainScaffold(
             composable(MainDestination.SETTINGS.name) {
                 SettingsScreen(
                     onNavigateToFilters = { navController.navigate("filters") },
+                    onNavigateToServerConfig = { navController.navigate(Screen.ServerConfig.route) },
                     onNavigateToHealth = { navController.navigate("health") },
                     onDisconnect = onDisconnect
                 )

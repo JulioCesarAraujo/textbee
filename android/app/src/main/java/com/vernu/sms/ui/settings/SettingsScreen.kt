@@ -31,6 +31,7 @@ import com.vernu.sms.BuildConfig
 fun SettingsScreen(
     onNavigateToFilters: () -> Unit,
     onNavigateToHealth: () -> Unit,
+    onNavigateToServerConfig: (() -> Unit)? = null,
     onDisconnect: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
@@ -164,6 +165,19 @@ fun SettingsScreen(
             }
 
             SettingsSectionHeader("Offline Mode")
+
+            if (onNavigateToServerConfig != null) {
+                SettingsRow(
+                    icon = Icons.Default.Dns,
+                    title = "Servidor local",
+                    subtitle = "IP, porta e token do servidor na rede local",
+                    onClick = onNavigateToServerConfig,
+                    trailing = {
+                        Icon(Icons.Default.ChevronRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                )
+            }
 
             SettingsSwitchRow(
                 icon = Icons.Default.Power,
