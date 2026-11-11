@@ -56,6 +56,17 @@ function parseAttribution(raw: unknown) {
   }
 }
 
+// The person chose offline mode on the login or register form: ask the API to
+// skip email verification. The API honours it only when it runs with
+// OFFLINE_MODE_ENABLED=true, so a cloud server ignores it.
+function offlineAuthFlags(offlineMode: unknown) {
+  if (offlineMode !== 'true') return undefined
+  return {
+    OFFLINE_MODE_ENABLED: true,
+    OFFLINE_MODE_SKIP_EMAIL_VERIFICATION: true,
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -65,6 +76,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'email', type: 'text' },
         password: { label: 'Password', type: 'password' },
         turnstileToken: { label: 'Turnstile Token', type: 'text' },
+        offlineMode: { label: 'Offline Mode', type: 'text' },
       },
       async authorize(credentials, req) {
         // NextAuth can invoke authorize with no credentials at all. There is
@@ -72,12 +84,14 @@ export const authOptions: NextAuthOptions = {
         // undefined fields to the login endpoint.
         if (!credentials) return null
         const { email, password, turnstileToken } = credentials
+        const authFlags = offlineAuthFlags(credentials.offlineMode)
         try {
           const res = await httpServerClient.post(ApiEndpoints.auth.login(), {
             email,
             password,
             turnstileToken,
             client: clientContextFromHeaders(req?.headers),
+            ...(authFlags && { authFlags }),
           })
 
           const user = res.data.data.user
@@ -105,10 +119,12 @@ export const authOptions: NextAuthOptions = {
         marketingOptIn: { label: 'Marketing Opt In', type: 'text' },
         attribution: { label: 'Attribution', type: 'text' },
         turnstileToken: { label: 'Turnstile Token', type: 'text' },
+        offlineMode: { label: 'Offline Mode', type: 'text' },
       },
       async authorize(credentials, req) {
         if (!credentials) return null
         const { email, password, name, phone, turnstileToken } = credentials
+        const authFlags = offlineAuthFlags(credentials.offlineMode)
         try {
           const res = await httpServerClient.post(
             ApiEndpoints.auth.register(),
@@ -124,6 +140,7 @@ export const authOptions: NextAuthOptions = {
               // user agent instead of the visitor's.
               client: clientContextFromHeaders(req?.headers),
               turnstileToken,
+              ...(authFlags && { authFlags }),
             }
           )
 

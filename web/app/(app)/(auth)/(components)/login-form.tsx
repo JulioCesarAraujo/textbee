@@ -16,6 +16,7 @@ import { authButtonClass, authFieldClass } from './auth-styles'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -23,10 +24,14 @@ import {
 } from '@/components/ui/form'
 import { Routes } from '@/config/routes'
 import { useTurnstile } from '@/lib/turnstile'
+import { Checkbox } from '@/components/ui/checkbox'
+import { useOfflineModeStatus } from '@/lib/offline-mode'
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
   password: z.string().min(1, { message: 'Password is required' }),
+  // Offline mode: an account still unverified is treated as verified
+  offlineMode: z.boolean().optional(),
   turnstileToken: z
     .string()
     .min(1, { message: 'Please complete the bot verification' }),
@@ -36,15 +41,22 @@ type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginForm() {
   const router = useRouter()
+  const offlineStatus = useOfflineModeStatus()
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
+      offlineMode: false,
       turnstileToken: '',
     },
   })
+
+  // On an offline server the option starts checked; the person can uncheck it
+  useEffect(() => {
+    if (offlineStatus.offlineModeEnabled) form.setValue('offlineMode', true)
+  }, [offlineStatus.offlineModeEnabled, form])
 
   const {
     containerRef: turnstileRef,
@@ -92,6 +104,7 @@ export default function LoginForm() {
         email: data.email,
         password: data.password,
         turnstileToken: data.turnstileToken,
+        offlineMode: offlineStatus.offlineModeEnabled && data.offlineMode === true,
       })
 
       if (result?.error) {
@@ -165,6 +178,36 @@ export default function LoginForm() {
             </FormItem>
           )}
         />
+        {offlineStatus.offlineModeEnabled &&
+          !offlineStatus.skipEmailVerification && (
+            <FormField
+              control={form.control}
+              name='offlineMode'
+              render={({ field }) => (
+                <FormItem>
+                  <div className='flex items-start gap-3 space-y-0'>
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value === true}
+                        onCheckedChange={field.onChange}
+                        className='mt-0.5'
+                      />
+                    </FormControl>
+                    <div className='space-y-1'>
+                      <FormLabel className='text-sm font-normal leading-5'>
+                        Estou no modo offline (servidor local)
+                      </FormLabel>
+                      <FormDescription className='text-xs'>
+                        Dispensa a confirmação de e-mail, que não funciona sem
+                        internet.
+                      </FormDescription>
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         <FormField
           control={form.control}
           name='turnstileToken'

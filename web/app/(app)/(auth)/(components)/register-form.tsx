@@ -26,6 +26,7 @@ import { Routes } from '@/config/routes'
 import { useTurnstile } from '@/lib/turnstile'
 import { readAttribution } from '@/lib/analytics/attribution'
 import { track } from '@/lib/analytics/track'
+import { useOfflineModeStatus } from '@/lib/offline-mode'
 
 const registerSchema = z.object({
   name: z
@@ -37,6 +38,8 @@ const registerSchema = z.object({
     .min(8, { message: 'Password must be at least 8 characters long' }),
   phone: z.string().optional(),
   marketingOptIn: z.boolean().optional().default(true),
+  // Offline mode: the server cannot send the verification email
+  offlineMode: z.boolean().optional().default(false),
   turnstileToken: z
     .string()
     .min(1, { message: 'Please complete the bot verification' }),
@@ -52,6 +55,7 @@ type RegisterFormValues = z.output<typeof registerSchema>
 
 export default function RegisterForm() {
   const router = useRouter()
+  const offlineStatus = useOfflineModeStatus()
 
   const form = useForm<RegisterFormInput, unknown, RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -61,6 +65,7 @@ export default function RegisterForm() {
       password: '',
       phone: '',
       marketingOptIn: true,
+      offlineMode: false,
       turnstileToken: '',
     },
   })
@@ -78,6 +83,11 @@ export default function RegisterForm() {
     onExpire: (message) =>
       form.setError('turnstileToken', { type: 'manual', message }),
   })
+
+  // On an offline server the option starts checked; the person can uncheck it
+  useEffect(() => {
+    if (offlineStatus.offlineModeEnabled) form.setValue('offlineMode', true)
+  }, [offlineStatus.offlineModeEnabled, form])
 
   useEffect(() => {
     if (turnstileToken) {
@@ -117,6 +127,7 @@ export default function RegisterForm() {
         marketingOptIn: data.marketingOptIn,
         ...(attribution && { attribution: JSON.stringify(attribution) }),
         turnstileToken: data.turnstileToken,
+        offlineMode: offlineStatus.offlineModeEnabled && data.offlineMode,
       })
 
       if (result?.error) {
@@ -127,7 +138,15 @@ export default function RegisterForm() {
         })
       } else {
         track('sign_up', { method: 'email' })
-        router.push(`${Routes.verifyEmail}?verificationEmailSent=1`)
+        // Offline mode: the account is created verified and no email is sent
+        const skipped =
+          offlineStatus.offlineModeEnabled &&
+          (offlineStatus.skipEmailVerification || data.offlineMode)
+        router.push(
+          skipped
+            ? Routes.dashboard
+            : `${Routes.verifyEmail}?verificationEmailSent=1`
+        )
       }
     } catch (error) {
       console.error('register error:', error)
@@ -246,6 +265,38 @@ export default function RegisterForm() {
             </FormItem>
           )}
         />
+        {offlineStatus.offlineModeEnabled && (
+          <FormField
+            control={form.control}
+            name='offlineMode'
+            render={({ field }) => (
+              <FormItem>
+                <div className='flex items-start gap-3 space-y-0'>
+                  <FormControl>
+                    <Checkbox
+                      checked={
+                        offlineStatus.skipEmailVerification || field.value
+                      }
+                      disabled={offlineStatus.skipEmailVerification}
+                      onCheckedChange={field.onChange}
+                      className='mt-0.5'
+                    />
+                  </FormControl>
+                  <div className='space-y-1'>
+                    <FormLabel className='text-sm font-normal leading-5'>
+                      Estou no modo offline (servidor local)
+                    </FormLabel>
+                    <FormDescription className='text-xs'>
+                      Sem internet não é possível confirmar o e-mail, então
+                      essa etapa é pulada.
+                    </FormDescription>
+                  </div>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <FormField
           control={form.control}
           name='turnstileToken'

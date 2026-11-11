@@ -25,6 +25,8 @@ export const ApiEndpoints = {
     deleteApiKey: (id: string) => `/auth/api-keys/${id}`,
   },
   gateway: {
+    // Public: whether this server runs in offline mode (plan phase 6)
+    offlineStatus: () => '/gateway/offline/status',
     listDevices: () => '/gateway/devices',
     deleteDevice: (id: string) => `/gateway/devices/${id}`,
     setDefaultDevice: (id: string) => `/gateway/devices/${id}/set-default`,
