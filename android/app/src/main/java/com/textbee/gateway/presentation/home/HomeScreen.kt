@@ -1,6 +1,7 @@
 package com.textbee.gateway.presentation.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import com.vernu.sms.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -117,12 +120,11 @@ fun HomeScreen(
                 .border(1.dp, HairlineOutline.copy(alpha = 0.3f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            // Bee delivery envelope icon/illustration
-            Icon(
-                imageVector = Icons.Default.Dns,
-                contentDescription = "Textbee Mascot",
-                tint = PrimaryOrange,
-                modifier = Modifier.size(52.dp)
+            // Logo do textbee (o mesmo do dashboard anterior, splash e boas-vindas)
+            Image(
+                painter = painterResource(id = R.drawable.ic_app_logo),
+                contentDescription = "textbee",
+                modifier = Modifier.size(72.dp)
             )
         }
 
